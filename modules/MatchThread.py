@@ -22,8 +22,22 @@ class MatchThreadManager():
 		self.saveThreads()
 
 	def editMatchThread(self, matchThread):
+		if not self.matchThreads:
+			return
 		while True:
 			os.system('cls')
+			print('Update Thread is: ', end='')
+			if matchThread.uuid in self.updateThreads:
+				if self.updateThreads[matchThread.uuid].is_alive():
+					print('Running')
+				else:
+					print('Done')
+			else:
+				print('Not started')
+				
+			
+			
+			
 			print('1. Start update thread')
 			print('2. Stop update thread')
 			print('3. Set starting match')
@@ -47,7 +61,8 @@ class MatchThreadManager():
 				self.startThread(matchThread)
 			elif selection == 1:
 				# stop update thread
-				pass
+				self.stopThread(matchThread)
+				return
 			elif selection == 2:
 				# set starting match
 				self.setStartingMatch(matchThread)
@@ -86,6 +101,11 @@ class MatchThreadManager():
 		self.updateThreads[uuid] = threading.Thread(target=matchThread.update)
 		self.updateThreads[uuid].start()
 		
+	def stopThread(self, matchThread):
+		uuid = matchThread.uuid
+		if uuid in self.updateThreads and self.updateThreads[uuid].is_alive():
+			matchThread.stop = True
+		
 	def makeRedditThread(self, matchThread):
 		os.system('cls')
 		title = raw_input('Enter Title: ')
@@ -112,7 +132,10 @@ class MatchThreadManager():
 		
 	def loadThreads(self):
 		# TODO: make sure all update threads are stopped first
-		self.matchThreads = pickle.load(open('save.p', 'rb'))
+		try:
+			self.matchThreads = pickle.load(open('save.p', 'rb'))
+		except:
+			pass
 		
 	
 class MatchThread():
@@ -133,8 +156,9 @@ class MatchThread():
 	
 	def update(self):
 		while True:
+			print('test')
 			if self.stop:
 				self.stop = False
-				return
+				break
 			self.updateThread()
 			time.sleep(1)
