@@ -20,20 +20,18 @@ class OverggScraper:
 		return totalSeconds
 		
 	@classmethod
-	def scrapeTournament(self, link, startTime, endTime):
-		tournamentInfo = dict()
+	def scrapeTournament(self, tournamentData):
 		# scrape tournament list
-		htmlTournament = urllib.urlopen(link).read()
+		htmlTournament = urllib.urlopen(tournamentData['overggTournamentLink']).read()
 		soupTournament = BeautifulSoup(htmlTournament, 'html.parser')
+		
+		tournamentInfo = dict()
 		
 		# name
 		tournamentInfo['name'] = soupTournament.select('div.event-title')[0].get_text(strip=True)
 		
 		# stage
 		tournamentInfo['stage'] = soupTournament.select('a.wf-nav-item.mod-active')[0].select('div.wf-nav-item-title')[0].get_text(strip=True)
-		
-		#streams
-		tournamentInfo['streams'] = []
 		
 		# prize
 		tmp = soupTournament.select('div.event-desc')[0].find_all('div')
@@ -42,8 +40,7 @@ class OverggScraper:
 			if 'prize pool:' in tmpStr:
 				tournamentInfo['prize'] = tmpStr.replace('prize pool:','').replace('\t',' ').strip()
 				break
-				
-				
+		
 		# groups
 		groupModules = soupTournament.select('div.group-module')
 		if len(groupModules) > 0:
@@ -52,31 +49,22 @@ class OverggScraper:
 			groupdict = dict()
 			# group name
 			groupdict['name'] = groupModule.select('div.wf-module-header')[0].get_text(strip=True)
-			# group teams
 			groupdict['teams'] = []
-			groupteams = groupModule.select('div.group-table-row-name')
-			for groupteam in groupteams:
-				groupdict['teams'].append(groupteam.get_text(strip=True))
-			# groupwins/loss
 			groupdict['wins'] = []
 			groupdict['loss'] = []
-			groupwinlosses = groupModule.select('div.group-table-row-matches')
-			first = True
-			for groupwinloss in groupwinlosses:
-				if first:
-					groupdict['wins'].append(groupwinloss.get_text(strip=True))
-					first = False
-				else:
-					groupdict['loss'].append(groupwinloss.get_text(strip=True))
-					first = True
-			# maps
+			groupdict['draws'] = []
 			groupdict['maps'] = []
-			groupmaps = groupModule.select('div.group-table-row-games')
-			for groupmap in groupmaps:
-				groupdict['maps'].append(groupmap.get_text(strip=True))
+			
+			groupRowModules = groupModule.select('div.group-table-row')
+			for groupRowModule in groupRowModules:
+				groupdict['teams'].append(groupRowModule.select('div.group-table-row-name')[0].get_text(strip=True))
+				groupdict['wins'].append(groupRowModule.select('div.group-table-row-matches')[0].get_text(strip=True))
+				groupdict['loss'].append(groupRowModule.select('div.group-table-row-matches')[1].get_text(strip=True))
+				groupdict['draws'].append(groupRowModule.select('div.group-table-row-matches')[2].get_text(strip=True))
+				groupdict['maps'].append(groupRowModule.select('div.group-table-row-games')[0].get_text(strip=True))
+			
 			tournamentInfo['groups'].append(groupdict)
-	
-	
+		
 		# brackets
 		# upper bracket
 		upperBracketContainer = soupTournament.select('div.bracket-container.mod-upper')
@@ -120,8 +108,7 @@ class OverggScraper:
 					upperBracketInfo['score_c'+str(col)+'_r'+str(row)+'_2'] = score2
 					
 			tournamentInfo['upperBracketInfo'] = upperBracketInfo
-		
-		
+			
 		# matches
 		tournamentInfo['matches'] = []
 		matchItems = soupTournament.select('a.wf-module-item.match-item')
@@ -139,17 +126,20 @@ class OverggScraper:
 					matchTime -= seconds
 				
 				# check if time is valid
-				if matchTime < startTime or matchTime > endTime:
+				if matchTime < tournamentData['startTimestamp'] or matchTime > tournamentData['endTimestamp']:
 					continue
 			
 				matchLink = 'https://www.over.gg' + matchItem['href']
 				
 				# scrape the match
 				match = OverggScraper.scrapeMatch(matchLink)
+				# scrape match title
+				matchTitle = matchItem.select('div.match-item-event-name')[0].get_text(strip=True)
+				match['title'] = matchTitle
+				
 				tournamentInfo['matches'].append(match)
-		
+	
 		return tournamentInfo
-
 		
 	@classmethod
 	def scrapeMatch(self, matchLink):
@@ -179,6 +169,13 @@ class OverggScraper:
 			streamLink = stream['href']
 			match['streams'].append((streamName, streamLink))
 			
+		# vods
+		gameVodsNode = soupMatch.select('div.game-vods')
+		if gameVodsNode:
+			vodLinkNodes = gameVodsNode[0].find_all('a')
+			if len(vodLinkNodes) > 0:
+				match['vod'] = vodLinkNodes[0]['href']
+				
 		# result
 		isFinal = soupMatch.select('div.match-header-vs-note')[0].get_text(strip=True) == 'final' if True else False
 		isLive = soupMatch.select('div.match-header-vs-note')[0].get_text(strip=True) == 'live' if True else False

@@ -30,3 +30,10 @@ class Reddit():
 	def editThread(self, threadLink, threadBody):
 		submission = reddit.submission(url=threadLink)
 		submission.edit(threadBody)
+		
+	@classmethod
+	def getComments(self, threadLink):
+		submission = reddit.submission(url=threadLink)
+		submission.comments.replace_more()
+		return submission.comments
+		
