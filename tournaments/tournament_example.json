@@ -1,0 +1,21 @@
+{
+    "collectHighlights": true,
+    "endTime": "01/01/2017 01:00",
+    "gosugamersLink": "",
+    "highlightReel": "",
+    "liquipediaLink": "",
+    "logos": true,
+    "officialWebsiteLink": "",
+    "overggTournamentLink": "",
+    "redditThreadLink": "",
+    "startTime": "01/01/2017 00:00",
+    "sticky": true,
+    "streams": [
+        {
+            "language": "us",
+            "link": "https://www.twitch.tv/xxx",
+            "name": "Streamname"
+        }
+    ],
+    "title": "Title"
+}
