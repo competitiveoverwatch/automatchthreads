@@ -35,5 +35,11 @@ class Twitch():
 		return Twitch.getStreamInfo(streamID)
 		
 	@classmethod
-	def isLive(streamname):
-		pass
+	def getClipInfo(self, clipLink):
+		try:
+			# get clip info
+			clipSlug = clipLink.split('/')[-1]
+			requestString = 'https://api.twitch.tv/kraken/clips/' + clipSlug
+			return requests.get(requestString, headers={'Accept': 'application/vnd.twitchtv.v5+json', 'Client-ID': config['creds']['twitchClientId']}).json()
+		except:
+			return None

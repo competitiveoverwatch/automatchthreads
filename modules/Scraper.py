@@ -1,5 +1,5 @@
 from __future__ import print_function
-import logging, urllib, datetime, time, re
+import logging, urllib.request, datetime, time, re
 from bs4 import BeautifulSoup
 
 class OverggScraper:
@@ -22,7 +22,7 @@ class OverggScraper:
 	@classmethod
 	def scrapeTournament(self, tournamentData):
 		# scrape tournament list
-		htmlTournament = urllib.urlopen(tournamentData['overggTournamentLink']).read()
+		htmlTournament = urllib.request.urlopen(tournamentData['overggTournamentLink']).read()
 		soupTournament = BeautifulSoup(htmlTournament, 'html.parser')
 		
 		tournamentInfo = dict()
@@ -143,7 +143,7 @@ class OverggScraper:
 		
 	@classmethod
 	def scrapeMatch(self, matchLink):
-		htmlMatch = urllib.urlopen(matchLink).read()
+		htmlMatch = urllib.request.urlopen(matchLink).read()
 		soupMatch = BeautifulSoup(htmlMatch, 'html.parser')
 							
 		match = dict()

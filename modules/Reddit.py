@@ -37,3 +37,6 @@ class Reddit():
 		submission.comments.replace_more()
 		return submission.comments
 		
+	@classmethod
+	def getNewPosts(self):
+		return subreddit.new(limit=100)

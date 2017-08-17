@@ -49,10 +49,10 @@ class TournamentThread(Thread):
 		
 		self.saveTournament()
 	
-	def updateLiveFlair(self):
+	def updateLiveState(self):
 		# live flair
-		liveState = self.checkLive()
-		Reddit.flairThread(self.tournamentData['redditThreadLink'], liveState)
+		self.liveState = self.checkLive()
+		Reddit.flairThread(self.tournamentData['redditThreadLink'], self.liveState)
 	
 	def checkLive(self):
 		# check if stream given
@@ -77,6 +77,7 @@ class TournamentThread(Thread):
 	
 	def run(self):
 		self.running = True
+		self.liveState = False
 		# wait for start time
 		while time.time() < self.tournamentData['startTimestamp']:
 			time.sleep(1)
@@ -89,7 +90,9 @@ class TournamentThread(Thread):
 		# initial update
 		self.updateThread()
 		# update loop
+		escapeFlag = False
 		while time.time() < self.tournamentData['endTimestamp']:
+			timeOffline = 0
 			seconds = 0
 			# wait 6 minutes
 			while seconds < 6*60:
@@ -97,13 +100,32 @@ class TournamentThread(Thread):
 				time.sleep(1)
 				# every 2 minutes
 				if seconds % (2*60) == 0:
-					self.updateLiveFlair()
+					self.updateLiveState()
 				
-				# escape point
+				# offline break check (after 1h)
+				if time.time() > self.tournamentData['startTimestamp'] + (60*60) and not self.liveState:
+					timeOffline += 1
+					if timeOffline > 30*60:
+						escapeFlag = True
+				else:
+					timeOffline = 0
+				
+				# escape points
 				if not self.running:
 					return		
+				if escapeFlag:
+					break
+			if escapeFlag:
+				break
 				
 			self.updateThread()
 			
 		# remove LIVE flair if necessary
 		Reddit.flairThread(self.tournamentData['redditThreadLink'], False)
+		
+		
+		# Highlight Reel
+		if not self.tournamentData['highlightReel']:
+			# collect highlights and make highlight reel
+			self.updateThread()
+			Highlights.makeHighlightReel(self.tournamentInfo)

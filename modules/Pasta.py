@@ -71,8 +71,8 @@ class PastaMaker():
 			upperBracketInfo = tournamentInfo['upperBracketInfo']
 			templateFilename = 'bracket-templates/u_' + upperBracketInfo['rowCounts'] + '.txt'			
 			if os.path.isfile(templateFilename):
-				with open(templateFilename) as templateFile:
-					template = Template(templateFile.read().decode('utf-8'))
+				with open(templateFilename, encoding='utf-8') as templateFile:
+					template = Template(templateFile.read())
 							
 				pasta += template.safe_substitute(upperBracketInfo) + '\n'
 			
@@ -85,7 +85,12 @@ class PastaMaker():
 				pasta += '|-|-|-|\n'
 				for highlight in tournamentInfo['highlights'][:10]:
 					linkText = (highlight['text'][:75] + '...') if len(highlight['text']) > 75 else highlight['text']
-					pasta += '| [' +linkText + '](' + highlight['link'] + ') | | [comment](' + highlight['permalink'] + ') - by ' + highlight['author'] + ' |\n'
+					pasta += '| [' +linkText + '](' + highlight['link'] + ') | | ['
+					if highlight['comment']:
+						pasta += 'comment'
+					else:
+						pasta += 'post'
+					pasta += '](' + highlight['permalink'] + ') - by ' + highlight['author'] + ' |\n'
 				pasta += '\n'
 			else:
 				pasta += 'No highlights yet!  \n'
