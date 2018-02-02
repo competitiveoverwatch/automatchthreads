@@ -1,17 +1,38 @@
 from modules.overgg import Overgg
-import zmq,time 
+import socket, time, pickle
+
+port = 10000
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_address = ('localhost', port)
+sock.connect(server_address)
+    
+def recv_object(conn):
+    chunks = []
+    while True:
+        data = conn.recv(4096)
+        if data:
+            chunks.append(data)
+        else:
+            break
+    data = b''.join(chunks)
+    return pickle.loads(data)
 
     
-port = "5556"
-context = zmq.Context()
-socket = context.socket(zmq.PAIR)
-socket.connect("tcp://localhost:%s" % port)
+def send_object(conn, message):
+    message = pickle.dumps(message)
+    sock.send(message)
 
+    
 link = input('Over.gg link --> ')
 reddit_title = input('Reddit title (optional) --> ')
+    
     
 message = dict()
 message['command'] = 'new_match'
 message['link'] = link
 message['reddit_title'] = reddit_title
-socket.send_pyobj(message)
+
+try:
+    send_object(sock, message)
+finally:
+    sock.close()

@@ -1,5 +1,5 @@
 from modules.overgg import Overgg
-import zmq,time 
+import socket, pickle ,time 
 
 link_types = {
     'gosugamers': 'c01-r01',
@@ -20,10 +20,27 @@ def find_match_by_url(url):
             return  match['timestamp']
     return '0'
     
-port = "5556"
-context = zmq.Context()
-socket = context.socket(zmq.PAIR)
-socket.connect("tcp://localhost:%s" % port)
+port = 10000
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_address = ('localhost', port)
+sock.connect(server_address)
+    
+def recv_object(conn):
+    chunks = []
+    while True:
+        data = conn.recv(4096)
+        if data:
+            chunks.append(data)
+        else:
+            break
+    data = b''.join(chunks)
+    return pickle.loads(data)
+
+    
+def send_object(conn, message):
+    message = pickle.dumps(message)
+    sock.send(message)
+
 
 link = input('Over.gg link --> ')
 
@@ -78,4 +95,8 @@ message['reddit_thread'] = reddit_thread
 message['reddit_title'] = reddit_title
 message['streams'] = streams
 message['information'] = information
-socket.send_pyobj(message)
+
+try:
+    send_object(sock, message)
+finally:
+    sock.close()

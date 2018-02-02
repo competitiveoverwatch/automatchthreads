@@ -2,13 +2,35 @@
 #from modules.Reddit import Reddit
 from modules.event_thread import EventThread
 from modules.match_thread import MatchThread
-import zmq
+import socket, pickle
 
-port = "5556"
-context = zmq.Context()
-socket = context.socket(zmq.PAIR)
-socket.bind("tcp://*:%s" % port)
 
+port = 10000
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_address = ('localhost', port)
+sock.bind(server_address)
+sock.listen(1)
+    
+    
+def recv_object(conn):
+    chunks = []
+    while True:
+        data = conn.recv(4096)
+        if data:
+            chunks.append(data)
+        else:
+            break
+    data = b''.join(chunks)
+    if data:
+        return pickle.loads(data)
+    else:
+        return None
+
+    
+def send_object(conn, message):
+    message = pickle.dumps(message)
+    sock.send(message)
+    
     
 class ThreadManager:
     event_threads = []
@@ -32,14 +54,20 @@ class ThreadManager:
     def manage_threads(cls):
         # main loop
         while True:
-            # wait for command
-            message = socket.recv_pyobj()
-            if 'command' in message:
-                # create new event
-                if message['command'] == 'new_event':
-                    cls.new_event(message)
-                # create new match
-                if message['command'] == 'new_match':
-                    cls.new_match(message)
+            # wait for connection
+            connection, client_address = sock.accept()
+            try:
+                message = recv_object(connection)
+                if message and 'command' in message:
+                    # create new event
+                    if message['command'] == 'new_event':
+                        cls.new_event(message)
+                    # create new match
+                    if message['command'] == 'new_match':
+                        cls.new_match(message)
+            finally:
+                connection.close()
+            
+            
             
         

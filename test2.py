@@ -1,9 +1,9 @@
 import socket
 import sys, time, pickle, json
 
+port = 10000
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-server_address = ('localhost', 10000)
+server_address = ('localhost', port)
 sock.connect(server_address)
 
 def recv_message(conn):
