@@ -100,3 +100,11 @@ ENV/
 # mypy
 .mypy_cache/
 /config/creds.json
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/sftp.json
