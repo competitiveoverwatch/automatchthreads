@@ -10,7 +10,7 @@ event_template = (
     '>\n'
     '>> *Streams:* {streams}\n'
     '>>\n'
-    '>> *Imformation:* {information}\n'
+    '>> *Information:* {information}\n'
     '>\n'
     '{teams}'
     '>\n'
@@ -100,7 +100,7 @@ class Pasta():
         return ''
         
     @classmethod
-    def event_pasta(cls, event, upcoming, start_timestamp=None, end_timestamp=None):
+    def event_pasta(cls, event):
         """Creates the markdown for an event."""
         # Title & Information
         sub = dict()
@@ -145,16 +145,8 @@ class Pasta():
         # Schedule
         for match in event['schedule']:
             sub = dict()
-            # Try to find a matching entry in upcoming matches
-            upcoming_match = cls.find_upcoming_match(match['link'], upcoming)
-            if not upcoming_match:
-                continue
-            # check timestamps
-            if start_timestamp and end_timestamp:
-                if int(upcoming_match['timestamp']) < start_timestamp or int(upcoming_match['timestamp']) > end_timestamp:
-                    continue
             # create match time string
-            sub['time'] = cls.time_from_timestamp(int(upcoming_match['timestamp']))
+            sub['time'] = '' #cls.time_from_timestamp(int(upcoming_match['timestamp']))
             sub['team_1_name'] = match['team_1_name']
             sub['team_2_name'] = match['team_2_name']
             sub['team_1_score'] = match['team_1_score']

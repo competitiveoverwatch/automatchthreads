@@ -5,44 +5,71 @@ from config import data as config
 class Overgg:
     """Over.gg scraper."""
     
+    
     @classmethod
-    def scrape_event(cls, event, url):
-        """Return a dictionary of event data for a given over.gg/event/ URL."""
+    def find_upcoming_match(cls, url, upcoming):
+        """Find and return match data in the upcoming match list via a given URL"""
+        for match in upcoming['matches']:
+            if url == match['match_link']:
+                return match
+        return None
         
+    @classmethod
+    def scrape_event(cls, event, timestamp=None, duration=None):
         try:
+            temp = dict()
+            
             # Load event page
-            htmlTournament = urllib.request.urlopen(url).read()
+            htmlTournament = urllib.request.urlopen(event['url']).read()
             soupTournament = BeautifulSoup(htmlTournament, 'html.parser')
 
             # Title
-            event['title'] = soupTournament.select('div.event-title')[0].get_text(strip=True)
+            temp['title'] = soupTournament.select('div.wf-title')[0].get_text(strip=True)
             
             # Location, Prize Pool, Start Date, End Date
             tmp = soupTournament.select('div.event-desc')[0].find_all('div')
             for item in tmp:
                 tmpStr = item.get_text(strip=True)
                 if 'location:' in tmpStr:
-                    event['location'] = tmpStr.replace('location:','').replace('\t',' ').strip()
+                    temp['location'] = tmpStr.replace('location:','').replace('\t',' ').strip()
                 if 'prize pool:' in tmpStr:
-                    event['prize_pool'] = tmpStr.replace('prize pool:','').replace('\t',' ').strip()
+                    temp['prize_pool'] = tmpStr.replace('prize pool:','').replace('\t',' ').strip()
                 if 'start:' in tmpStr:
-                    event['start_date'] = tmpStr.replace('start:','').replace('\t',' ').strip()
+                    temp['start_date'] = tmpStr.replace('start:','').replace('\t',' ').strip()
                 if 'end:' in tmpStr:
-                    event['end_date'] = tmpStr.replace('end:','').replace('\t',' ').strip()
+                    temp['end_date'] = tmpStr.replace('end:','').replace('\t',' ').strip()
                     
             # Stage
             tmp = soupTournament.select('a.wf-nav-item.mod-active')[0].select('div.wf-nav-item-title')[0]
-            event['stage'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip()
+            temp['stage'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip()
                     
             # Schedule
-            event['schedule'] = []
+            api_schedule = cls.scrape_upcoming_completed() 
+                
+            temp['schedule'] = []
             matchItems = soupTournament.select('a.wf-module-item.match-item')
-            if matchItems:
+            if matchItems and api_schedule:
                 for matchItem in matchItems:
                     match = dict()
                     
                     # Link
                     match['link'] = 'https://www.over.gg' + matchItem['href']
+                    
+                    # Try to find match in API
+                    api_match = cls.find_upcoming_match(match['link'], api_schedule)
+                    
+                    # Timestamp
+                    if api_match:
+                        match['timestamp'] = api_match['timestamp']
+                    else:
+                        match['timestamp'] = None
+                    
+                    # Skip if not in time range
+                    if timestamp and duration:
+                        if not api_match:
+                            continue
+                        if int(api_match['timestamp']) < timestamp or int(api_match['timestamp']) > (timestamp + duration):
+                            continue
                     
                     # Teams
                     match['team_1_name'] = matchItem.select('div.match-item-vs-team-name')[0].get_text(strip=True)
@@ -52,10 +79,10 @@ class Overgg:
                     match['team_1_score'] = matchItem.select('div.match-item-vs-team-score')[0].get_text(strip=True)
                     match['team_2_score'] = matchItem.select('div.match-item-vs-team-score')[1].get_text(strip=True)
                     
-                    event['schedule'].append(match)
+                    temp['schedule'].append(match)
                     
             # Groups
-            event['groups'] = []
+            temp['groups'] = []
             groupItems = soupTournament.select('div.group-module')
             if groupItems:
                 for groupItem in groupItems:
@@ -66,7 +93,7 @@ class Overgg:
                     
                     # Rows
                     group['rows'] = []
-                    rowItems = groupItem.select('div.group-table-row')
+                    rowItems = groupItem.select('div.group-item')
                     if rowItems:
                         for rowItem in rowItems:
                             row = dict()
@@ -74,26 +101,27 @@ class Overgg:
                             # Team name
                             row['team_name'] = rowItem.select('div.group-table-row-name')[0].get_text(strip=True)
                             
+                            # Matches 
+                            matches = rowItem.select('div.group-table-row-matches')[0].get_text(strip=True).split('-')
                             # Wins
-                            row['wins'] = rowItem.select('div.group-table-row-matches')[0].get_text(strip=True)
+                            row['wins'] = matches[0]
                             # Losses
-                            row['losses'] = rowItem.select('div.group-table-row-matches')[1].get_text(strip=True)
+                            row['losses'] = matches[1]
                             # Draws
-                            row['draws'] = rowItem.select('div.group-table-row-matches')[2].get_text(strip=True)
+                            row['draws'] = matches[2]
                             
                             # Maps
                             row['maps'] = rowItem.select('div.group-table-row-games')[0].get_text(strip=True)
                             
                             group['rows'].append(row)
                             
-                    event['groups'].append(group)
+                    temp['groups'].append(group)
             
-            # Brackets
-            
-            
+            event.update(temp)
             return event
-        except:
-            return None
+        except Exception as e: 
+            print(e)
+            return event
     
     @classmethod   
     def scrape_upcoming_completed(cls):
@@ -127,6 +155,23 @@ class Overgg:
             return None
             
     @classmethod
+    def scrape_match_time(cls, url):
+        """ Return the starting timestamp for a given over.gg URL."""
+        try:
+            # Load event page
+            htmlMatch = urllib.request.urlopen(url).read()
+            soupMatch = BeautifulSoup(htmlMatch, 'html.parser')
+
+            # Timestamp
+            return int(soupMatch.select('div.moment-tz-convert')[0]['data-utc-ts'])
+        except:
+            return None
+
+
+
+
+
+    @classmethod
     def scrape_match(cls, url):
         """ Return a dictionary of match data for a given over.gg URL."""
         match = dict()
@@ -136,10 +181,11 @@ class Overgg:
         soupMatch = BeautifulSoup(htmlMatch, 'html.parser')
         
         # Teams
-        tmp = soupMatch.select('div.match-header-link-name')[0]
-        match['team_1_name'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip().replace('\n', '').replace('\t', '')
-        tmp = soupMatch.select('div.match-header-link-name')[1]
-        match['team_2_name'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip().replace('\n', '').replace('\t', '')
+        #tmp = soupMatch.select('div.match-header-link-name')[0]
+        match['team_1_name'] = soupMatch.select('div.wf-title-med')[0].get_text(strip=True)
+        #tmp = soupMatch.select('div.match-header-link-name')[1]
+        match['team_2_name'] = soupMatch.select('div.wf-title-med')[1].get_text(strip=True)
+        #match['team_2_name'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip().replace('\n', '').replace('\t', '')
         
         # Score
         vs_score = soupMatch.select('div.match-header-vs-score')
@@ -166,17 +212,17 @@ class Overgg:
         match['event_name'] = soupMatch.select('a.match-info-section-event')[0].get_text(strip=True)
         
         # Event stage
-        tmp = soupMatch.select('div.match-info-section.mod-event')[0]
-        match['event_stage'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip().replace('\n', '').replace('\t', '')
+        #tmp = soupMatch.select('div.match-info-section.mod-event')[0]
+        match['event_stage'] = "" #"".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip().replace('\n', '').replace('\t', '')
         
         # Streams
-        match['streams'] = []
-        stream_list = soupMatch.select('div.match-info-section')[2].select('a')
-        for stream in stream_list:
-            new_stream = dict()
-            new_stream['name'] = stream.get_text(strip=True)
-            new_stream['url'] = stream['href']
-            match['streams'].append(new_stream)
+        #match['streams'] = []
+        #stream_list = soupMatch.select('div.match-info-section')[2].select('a')
+        #for stream in stream_list:
+        #    new_stream = dict()
+        #    new_stream['name'] = stream.get_text(strip=True)
+        #    new_stream['url'] = stream['href']
+        #    match['streams'].append(new_stream)
         
         # Maps
         match['maps'] = []
@@ -187,31 +233,32 @@ class Overgg:
             # Map name
             new_map['map_name'] = soupMatch.select('div.game-switch-map-name')[i].get_text(strip=True)
             
-            # Players
-            new_map['team_1_players'] = []
-            player_list = map.select('div.game-team')[0].select('a')
-            for player in player_list:
-                new_player = dict()
-                new_player['name'] = player.get_text(strip=True)
-                new_player['flag'] = player.select('i')[0]['class'][1].replace('mod-', '')
-                new_map['team_1_players'].append(new_player)
-                
-            new_map['team_2_players'] = []
-            player_list = map.select('div.game-team')[1].select('a')
-            for player in player_list:
-                new_player = dict()
-                new_player['name'] = player.get_text(strip=True)
-                new_player['flag'] = player.select('i')[0]['class'][1].replace('mod-', '')
-                new_map['team_2_players'].append(new_player)
-            
             # Stats
             new_map['team_1_stats'] = []
             new_map['team_2_stats'] = []
+            new_map['team_1_players'] = [{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''}]
+            new_map['team_2_players'] = [{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''},{'name': '','flag':''}]
             if map.select('div.game-stats-team'):
+                
+                # Players
+                # player_list = map.select('table')[0].select('a')
+                # for player in player_list:
+                    # new_player = dict()
+                    # new_player['name'] = player.select('div')[0].get_text(strip=True)
+                    # new_player['flag'] = player.select('div')[0].select('i')[0]['class'][1].replace('mod-', '')
+                    # new_map['team_1_players'].append(new_player)
+                    
+                # player_list = map.select('table')[1].select('a')
+                # for player in player_list:
+                    # new_player = dict()
+                    # new_player['name'] = player.select('div')[0].get_text(strip=True)
+                    # new_player['flag'] = player.select('div')[0].select('i')[0]['class'][1].replace('mod-', '')
+                    # new_map['team_2_players'].append(new_player)
+            
                 new_map['team_1_score'] = 0
                 new_map['team_2_score'] = 0
-                stats_list = map.select('div.game-stats-team')[0].select('div')
-                for stat in stats_list[1:]:
+                stats_list = map.select('div.game-stats-team')[0].select('div.js-spoiler')[0].select('div')
+                for stat in stats_list:
                     new_stat = dict()
                     label = stat.select('span.game-stats-team-label')[0].get_text(strip=True).replace(':','')
                     value = stat.select('span.game-stats-team-value')[0].get_text(strip=True).replace(':','')
@@ -222,8 +269,8 @@ class Overgg:
                     new_stat['value'] = value
                     new_map['team_1_stats'].append(new_stat)
                 
-                stats_list = map.select('div.game-stats-team')[1].select('div')
-                for stat in stats_list[1:]:
+                stats_list = map.select('div.game-stats-team')[1].select('div.js-spoiler')[0].select('div')
+                for stat in stats_list:
                     new_stat = dict()
                     label = stat.select('span.game-stats-team-label')[0].get_text(strip=True).replace(':','')
                     value = stat.select('span.game-stats-team-value')[0].get_text(strip=True).replace(':','')

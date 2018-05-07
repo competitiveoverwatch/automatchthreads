@@ -1,3 +1,11 @@
-from modules.threadmanager import ThreadManager
+from modules.thread_manager import ThreadManager
+from modules.interface import Interface
 
-ThreadManager.manage_threads()
+thread_manager = ThreadManager()
+thread_manager.start()
+
+interface = Interface()
+interface.start()
+
+thread_manager.join()
+interface.join()

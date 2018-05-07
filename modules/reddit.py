@@ -22,7 +22,10 @@ class Reddit():
         """Set up an existing reddit thread."""
         submission = reddit.submission(url=thread_link)
         if sticky:
-            submission.mod.sticky(state=True, bottom=True)
+            try:
+                submission.mod.sticky(state=True, bottom=True)
+            except:
+                pass
         if spoiler:
             submission.mod.spoiler()
         if sort_new:
@@ -39,7 +42,6 @@ class Reddit():
             if submission.link_flair_text != 'Match Thread':
                 submission.mod.flair(text='Match Thread', css_class='Match')
                 
-        
     @classmethod
     def getComments(cls, threadLink):
         submission = reddit.submission(url=threadLink)
