@@ -172,12 +172,10 @@ class Overgg:
 
 
     @classmethod
-    def scrape_match(cls, url):
+    def scrape_match(cls, match):
         """ Return a dictionary of match data for a given over.gg URL."""
-        match = dict()
-    
-        # Load event page
-        htmlMatch = urllib.request.urlopen(url).read()
+            # Load event page
+        htmlMatch = urllib.request.urlopen(match['url']).read()
         soupMatch = BeautifulSoup(htmlMatch, 'html.parser')
         
         # Teams

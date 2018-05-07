@@ -12,7 +12,6 @@ class ThreadManager(Thread):
         db = Database()
         events = db.get_events()
         for event in events:
-            print('- Event -')
             try:
                 # pass data to event handler
                 event = EventHandler.check_event_entry(event)
@@ -26,7 +25,6 @@ class ThreadManager(Thread):
         db = Database()
         matches = db.get_matches()
         for match in matches:
-            print('- Match -')
             try:
                 # pass data to event handler
                 match = MatchHandler.check_match_entry(match)

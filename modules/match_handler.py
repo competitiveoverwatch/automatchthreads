@@ -7,46 +7,35 @@ class MatchHandler:
 
     @classmethod
     def check_upcoming_match(cls, match_entry):
+        # update start_time every 30 minutes
         if (not match_entry['timestamp']) or (time.time() - match_entry['update_timestamp'] > 60*60):
             timestamp = Overgg.scrape_match_time(match_entry['data']['url'])
             if timestamp:
                 match_entry['timestamp'] = timestamp # 30 minutes before match start
-                match_entry['update_timestamp'] = time.time()
-        
-        # update start_time every 30 minutes
-            # update start time        
-        # past start_time
-            #make live
+                match_entry['update_timestamp'] = time.time()     
+        # set live
+        elif time.time() > match_entry['timestamp']:
+            match_entry['update_timestamp'] = time.time()
+            match_entry['status'] = 'live'
         return match_entry
-
-
- if (not event_entry['timestamp']) or (time.time() - event_entry['update_timestamp'] > 30*60):
-            print('Timestamp Update')
-            timestamp = Overgg.scrape_match_time(event_entry['data']['start_match_url'])
-            if timestamp:
-                event_entry['timestamp'] = timestamp - (30*60) # 30 minutes before match start
-                event_entry['update_timestamp'] = time.time()
-        # start thread if necessary
-        if time.time() > event_entry['timestamp']:
-            print('Creating Thread')
-            # scrape event
-            event_entry['data'] = Overgg.scrape_event(event_entry['data'], event_entry['timestamp'], event_entry['duration'])
-            # create markdown for the thread
-            body_text = Pasta.event_pasta(event_entry['data'])
-            # create reddit thread if necessary
-            if (not 'reddit_url' in event_entry['data']) or (not event_entry['data']['reddit_url']):
-                event_entry['data']['reddit_url'] = Reddit.new_thread(event_entry['data']['reddit_title'], body_text)
-            Reddit.setup_thread(event_entry['data']['reddit_url'], sticky=True, sort_new=True, spoiler=True)
-            # update database entry
-            event_entry['update_timestamp'] = time.time()
-            event_entry['status'] = 'live'
-        return event_entry
 
     @classmethod
     def check_live_match(cls, match_entry):
-        # decide x
-        # every x minutes
+        # decide how often to check for finished
+        check_time = 20*60 # every 20 min
+        if time.time() > match_entry['timestamp'] + 60*60:
+            check_time = 3*60 # every 3 min
+        # every x minutes check if finished
+        if time.time() > match_entry['update_timestamp'] + check_time:
             # check if finished
+            match_entry['data'] = Overgg.scrape_match(match_entry['data'])
+            if match_entry['data']['state'] == 'final':
+                # make thread
+                body_text = Pasta.match_pasta(match_entry['data'])
+                match_entry['data']['reddit_url'] = Reddit.new_thread(match_entry['data']['reddit_title'], body_text)
+                Reddit.setup_thread(match_entry['data']['reddit_url'], sticky=False, sort_new=False, spoiler=True)
+                match_entry['status'] = 'done'
+            match_entry['update_timestamp'] = time.time()
         return match_entry
 
     @classmethod
@@ -60,11 +49,13 @@ class MatchHandler:
         # done matches
         if match_entry['status'] == 'done':
             pass
-        print(cls.event_description(match_entry))
+        print(cls.match_description(match_entry))
         return match_entry
 
     @classmethod
-    def event_description(cls, match_entry):
-        event_title = 'Unknown'
-        date_time = 'Unknown'
-        return match_entry['status'] + ': ' + event_title + ' - ' + date_time
+    def match_description(cls, match_entry):
+        match_event_name = match_entry['data']['event_name'] if 'event_name' in match_entry['data'] else 'Unknown'
+        team_1 = match_entry['data']['team_1_name'] if 'team_1_name' in match_entry['data'] else 'Unknown'
+        team_2 = match_entry['data']['team_2_name'] if 'team_2_name' in match_entry['data'] else 'Unknown'
+        date_time = datetime.datetime.fromtimestamp(match_entry['timestamp']).strftime('%Y-%m-%d %H:%M:%S') + ' UTC' if match_entry['timestamp'] else 'Unknown'
+        return match_entry['status'] + ': ' + date_time + ' -- ' + match_event_name + ': ' + team_1 + ' vs. ' + team_2

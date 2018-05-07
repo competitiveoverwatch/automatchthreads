@@ -15,7 +15,7 @@ class EventHandler:
                 event_entry['timestamp'] = timestamp - (30*60) # 30 minutes before match start
                 event_entry['update_timestamp'] = time.time()
         # start thread if necessary
-        if time.time() > event_entry['timestamp']:
+        elif time.time() > event_entry['timestamp']:
             print('Creating Thread')
             # scrape event
             event_entry['data'] = Overgg.scrape_event(event_entry['data'], event_entry['timestamp'], event_entry['duration'])
@@ -65,5 +65,5 @@ class EventHandler:
     def event_description(cls, event_entry):
         event_title = event_entry['data']['title'] if 'title' in event_entry['data'] else 'Unknown'
         date_time = datetime.datetime.fromtimestamp(event_entry['timestamp']).strftime('%Y-%m-%d %H:%M:%S') + ' UTC' if event_entry['timestamp'] else 'Unknown'
-        return event_entry['status'] + ': ' + event_title + ' - ' + date_time
+        return event_entry['status'] + ': ' + date_time + ' -- ' + event_title
         
