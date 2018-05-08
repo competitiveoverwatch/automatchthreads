@@ -4,21 +4,26 @@ class Database:
     def __init__(self):
         self.conn = sqlite3.connect('automatchthreads.db')
     
+    def __del__(self):
+        self.conn.close()
+
     ### Event Database
-    def new_event(self, duration, data):
+    def new_event(self, event):
         # prepare data
-        if data:
-            data = pickle.dumps(data)
-        insert = ('upcoming', None, duration, time.time(), data)
+        event['status'] = 'upcoming'
+        event['timestamp'] = None
+        event['update_timestamp'] = time.time()
+        data = pickle.dumps(event)
+        insert = (event['status'], event['timestamp'], event['duration'], event['update_timestamp'], data)
         # insert into database
         c = self.conn.cursor()
         c.execute('INSERT INTO events (status, timestamp, duration, update_timestamp, data) VALUES (?, ?, ?, ?, ?)', insert)
         self.conn.commit()
         c.close()
-    
-    def update_event(self, event_data):
-        data = pickle.dumps(event_data['data'])
-        insert = (event_data['status'], event_data['timestamp'], event_data['duration'], event_data['update_timestamp'], data, event_data['id'])
+
+    def update_event(self, event):
+        data = pickle.dumps(event['data'])
+        insert = (event['status'], event['timestamp'], event['duration'], event['update_timestamp'], data, event['id'])
         c = self.conn.cursor()
         c.execute('UPDATE events SET status = ? ,timestamp = ? ,duration = ?, update_timestamp = ? ,data = ? WHERE id = ?', insert)
         self.conn.commit()
@@ -27,11 +32,9 @@ class Database:
     def make_event_dict(self, input):
         ret = []
         for event in input:
-            new_event = {'id': event[0], 'status': event[1], 'timestamp': event[2], 'duration': event[3], 'update_timestamp': event[4]}
+            new_event = {'id': event[0]} # make sure id is set
             if event[5]:
-                new_event['data'] = pickle.loads(event[5])
-            else:
-                new_event['data'] = None
+                new_event.update(pickle.loads(event[5])) # update with pickled data
             ret.append(new_event)
         return ret
 
@@ -53,20 +56,22 @@ class Database:
 
 
     ### Match Database
-    def new_match(self, data):
+    def new_match(self, match):
         # prepare data
-        if data:
-            data = pickle.dumps(data)
-        insert = ('upcoming', None, time.time(), data)
+        match['status'] = 'upcoming'
+        match['timestamp'] = None
+        match['update_timestamp'] = time.time()
+        data = pickle.dumps(match)
+        insert = (match['status'], match['timestamp'], match['update_timestamp'], data)
         # insert into database
         c = self.conn.cursor()
         c.execute('INSERT INTO matches (status, timestamp, update_timestamp, data) VALUES (?, ?, ?, ?)', insert)
         self.conn.commit()
         c.close()
 
-    def update_match(self, match_data):
-        data = pickle.dumps(match_data['data'])
-        insert = (match_data['status'], match_data['timestamp'], match_data['update_timestamp'], data, match_data['id'])
+    def update_match(self, match):
+        data = pickle.dumps(match)
+        insert = (match['status'], match['timestamp'], match['update_timestamp'], data, match['id'])
         c = self.conn.cursor()
         c.execute('UPDATE matches SET status = ? ,timestamp = ?, update_timestamp = ? ,data = ? WHERE id = ?', insert)
         self.conn.commit()
@@ -75,11 +80,9 @@ class Database:
     def make_match_dict(self, input):
         ret = []
         for match in input:
-            new_match = {'id': match[0], 'status': match[1], 'timestamp': match[2], 'update_timestamp': match[3]}
+            new_match = {'id': match[0]} # make sure id is set
             if match[4]:
-                new_match['data'] = pickle.loads(match[4])
-            else:
-                new_match['data'] = None
+                new_match.update(pickle.loads(match[4])) # update with pickled data
             ret.append(new_match)
         return ret
 

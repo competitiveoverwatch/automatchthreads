@@ -25,13 +25,13 @@ class ThreadManager(Thread):
         db = Database()
         matches = db.get_matches()
         for match in matches:
-            try:
+            #try:
                 # pass data to event handler
-                match = MatchHandler.check_match_entry(match)
+            match = MatchHandler.check_match(match)
                 # update entry
-                db.update_match(match)
-            except Exception as e:
-                print('!!Something went wrong - ' + type(e).__name__)
+            db.update_match(match)
+            #except Exception as e:
+            #    print('!!Something went wrong - ' + type(e).__name__)
         
     
     def run(self):

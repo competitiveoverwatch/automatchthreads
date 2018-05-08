@@ -231,10 +231,10 @@ class Pasta():
         # Players
         for i in range(6):
             sub = dict()
-            sub['team_1_player'] = match['maps'][0]['team_1_players'][i]['name']
-            sub['team_2_player'] = match['maps'][0]['team_2_players'][i]['name']
-            sub['team_1_player_flag'] = '[](#flag-' + match['maps'][0]['team_1_players'][i]['flag'] + ')'
-            sub['team_2_player_flag'] = '[](#flag-' + match['maps'][0]['team_2_players'][i]['flag'] + ')'
+            sub['team_1_player'] = '' #match['maps'][0]['team_1_players'][i]['name']
+            sub['team_2_player'] = '' #match['maps'][0]['team_2_players'][i]['name']
+            sub['team_1_player_flag'] = '' #'[](#flag-' + match['maps'][0]['team_1_players'][i]['flag'] + ')'
+            sub['team_2_player_flag'] = '' #'[](#flag-' + match['maps'][0]['team_2_players'][i]['flag'] + ')'
         
             pasta += match_player_template.format(**sub)
             
@@ -247,51 +247,52 @@ class Pasta():
             
             pasta += match_map_template.format(**sub)
             
-            # Header
-            sub = dict()
-            for i in range(5):
-                if i < len(map['team_1_stats']):
-                    sub['header_' + str(i+1)] = map['team_1_stats'][i]['label']
-                else:
-                    sub['header_' + str(i+1)] = ''
-                    
-            pasta += match_map_header_template.format(**sub)
-            
-            # Team 1
-            sub = dict()
-            modifier = ''
-            if map['winner'] == 1:
-                modifier = '**'
-            elif map['winner'] == 2:
-                modifier = '*'
-            sub['team_flair'] = modifier + team_1_flair + modifier
-            sub['team_name'] = match['team_1_name']
-            sub['team_score'] = map['team_1_score']
-            for i in range(5):
-                if i < len(map['team_1_stats']):
-                    sub['item_' + str(i+1)] = map['team_1_stats'][i]['value']
-                else:
-                    sub['item_' + str(i+1)] = ''
-            
-            pasta += match_map_row_template.format(**sub)
-            
-            # Team 2
-            sub = dict()
-            modifier = ''
-            if map['winner'] == 2:
-                modifier = '**'
-            elif map['winner'] == 1:
-                modifier = '*'
+            if map['team_1_stats'] and map['team_2_stats']:
+                # Header
+                sub = dict()
+                for i in range(5):
+                    if i < len(map['team_1_stats']):
+                        sub['header_' + str(i+1)] = map['team_1_stats'][i]['label']
+                    else:
+                        sub['header_' + str(i+1)] = ''
+                        
+                pasta += match_map_header_template.format(**sub)
                 
-            sub['team_flair'] = modifier + team_2_flair + modifier
-            sub['team_name'] = match['team_2_name']
-            sub['team_score'] = map['team_2_score']
-            for i in range(5):
-                if i < len(map['team_2_stats']):
-                    sub['item_' + str(i+1)] = map['team_2_stats'][i]['value']
-                else:
-                    sub['item_' + str(i+1)] = ''
-            
-            pasta += match_map_row_template.format(**sub)
+                # Team 1
+                sub = dict()
+                modifier = ''
+                if map['winner'] == 1:
+                    modifier = '**'
+                elif map['winner'] == 2:
+                    modifier = '*'
+                sub['team_flair'] = modifier + team_1_flair + modifier
+                sub['team_name'] = match['team_1_name']
+                sub['team_score'] = map['team_1_score']
+                for i in range(5):
+                    if i < len(map['team_1_stats']):
+                        sub['item_' + str(i+1)] = map['team_1_stats'][i]['value']
+                    else:
+                        sub['item_' + str(i+1)] = ''
+                
+                pasta += match_map_row_template.format(**sub)
+                
+                # Team 2
+                sub = dict()
+                modifier = ''
+                if map['winner'] == 2:
+                    modifier = '**'
+                elif map['winner'] == 1:
+                    modifier = '*'
+                    
+                sub['team_flair'] = modifier + team_2_flair + modifier
+                sub['team_name'] = match['team_2_name']
+                sub['team_score'] = map['team_2_score']
+                for i in range(5):
+                    if i < len(map['team_2_stats']):
+                        sub['item_' + str(i+1)] = map['team_2_stats'][i]['value']
+                    else:
+                        sub['item_' + str(i+1)] = ''
+                
+                pasta += match_map_row_template.format(**sub)
             
         return pasta
