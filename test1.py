@@ -20,15 +20,12 @@ import pprint
 #pprint.pprint(event)
 #pprint.pprint(pasta)
 
-#event = {'url': 'https://www.over.gg/event/177/overwatch-league-season-1', 'start_match_url': 'https://www.over.gg/6511/nyxl-vs-ldn-overwatch-league-season-1-stage-1-w5', 'reddit_title': 'test'}
-
-match = {'url': 'https://www.over.gg/8179/nyxl-vs-bos-overwatch-league-season-1-stage-3-title', 'reddit_title': 'Test', 'scrape_method': 'overgg'}
+event = {'duration': 15000, 'url': 'https://www.over.gg/event/s/214/407/overwatch-contenders-2018-season-1-north-america-playoffs', 'start_match_url': 'https://www.over.gg/8044/to-vs-ev-overwatch-contenders-2018-season-1-north-america-playoffs-semis', 'reddit_title': 'test', 'scrape_method': 'overgg'}
+#match = {'url': 'https://www.over.gg/8179/nyxl-vs-bos-overwatch-league-season-1-stage-3-title', 'reddit_title': 'Test', 'scrape_method': 'overgg'}
 
 db = Database()
-db.new_match(match)
-
-
-#db.new_event(15000, event)
+#db.new_match(match)
+db.new_event(event)
 
 #events = db.get_events()
 #pprint.pprint(events)

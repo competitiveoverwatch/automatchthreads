@@ -15,38 +15,53 @@ class Overgg:
         return None
         
     @classmethod
-    def scrape_event(cls, event, timestamp=None, duration=None):
-        try:
-            temp = dict()
-            
-            # Load event page
-            htmlTournament = urllib.request.urlopen(event['url']).read()
-            soupTournament = BeautifulSoup(htmlTournament, 'html.parser')
+    def scrape_event(cls, event):
+        ### Load event page
+        htmlTournament = urllib.request.urlopen(event['url']).read()
+        soupTournament = BeautifulSoup(htmlTournament, 'html.parser')
 
-            # Title
-            temp['title'] = soupTournament.select('div.wf-title')[0].get_text(strip=True)
-            
-            # Location, Prize Pool, Start Date, End Date
-            tmp = soupTournament.select('div.event-desc')[0].find_all('div')
-            for item in tmp:
-                tmpStr = item.get_text(strip=True)
-                if 'location:' in tmpStr:
-                    temp['location'] = tmpStr.replace('location:','').replace('\t',' ').strip()
-                if 'prize pool:' in tmpStr:
-                    temp['prize_pool'] = tmpStr.replace('prize pool:','').replace('\t',' ').strip()
-                if 'start:' in tmpStr:
-                    temp['start_date'] = tmpStr.replace('start:','').replace('\t',' ').strip()
-                if 'end:' in tmpStr:
-                    temp['end_date'] = tmpStr.replace('end:','').replace('\t',' ').strip()
-                    
-            # Stage
-            tmp = soupTournament.select('a.wf-nav-item.mod-active')[0].select('div.wf-nav-item-title')[0]
-            temp['stage'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip()
-                    
-            # Schedule
-            api_schedule = cls.scrape_upcoming_completed() 
+        ### Title
+        try:
+            event['title'] = soupTournament.select('div.wf-title')[0].get_text(strip=True)
+        except:
+            event['title'] = 'Unknown'
+
+        ### Location, Prize Pool, Start Date, End Date
+        tmp = soupTournament.select('div.event-desc')[0].find_all('div')
+        for item in tmp:
+            tmpStr = item.get_text(strip=True)
+            if 'location:' in tmpStr:
+                try:
+                    event['location'] = tmpStr.replace('location:','').replace('\t',' ').strip()
+                except:
+                    event['location'] = 'Unknown'
+            if 'prize pool:' in tmpStr:
+                try:
+                    event['prize_pool'] = tmpStr.replace('prize pool:','').replace('\t',' ').strip()
+                except:
+                    event['prize_pool'] = 'Unknown'
+            if 'start:' in tmpStr:
+                try:
+                    event['start_date'] = tmpStr.replace('start:','').replace('\t',' ').strip()
+                except:
+                    event['start_date'] = 'Unknown'
+            if 'end:' in tmpStr:
+                try:
+                    event['end_date'] = tmpStr.replace('end:','').replace('\t',' ').strip()
+                except:
+                    event['end_date'] = 'Unknown'
                 
-            temp['schedule'] = []
+        ### Stage
+        try:
+            tmp = soupTournament.select('a.wf-nav-item.mod-active')[0].select('div.wf-nav-item-title')[0]
+            event['stage'] = "".join([t for t in tmp.contents if type(t)==bs4.element.NavigableString]).strip()
+        except:
+            event['stage'] = 'Unknown'
+                
+        ### Schedule
+        api_schedule = cls.scrape_upcoming_completed()
+        event['schedule'] = []
+        try:
             matchItems = soupTournament.select('a.wf-module-item.match-item')
             if matchItems and api_schedule:
                 for matchItem in matchItems:
@@ -65,63 +80,68 @@ class Overgg:
                         match['timestamp'] = None
                     
                     # Skip if not in time range
-                    if timestamp and duration:
+                    if event['timestamp'] and event['duration']:
                         if not api_match:
                             continue
-                        if int(api_match['timestamp']) < timestamp or int(api_match['timestamp']) > (timestamp + duration):
+                        if int(api_match['timestamp']) < event['timestamp'] or int(api_match['timestamp']) > (event['timestamp'] + event['duration']):
                             continue
                     
                     # Teams
-                    match['team_1_name'] = matchItem.select('div.match-item-vs-team-name')[0].get_text(strip=True)
-                    match['team_2_name'] = matchItem.select('div.match-item-vs-team-name')[1].get_text(strip=True)
+                    try:
+                        match['team_1_name'] = matchItem.select('div.match-item-vs-team-name')[0].get_text(strip=True)
+                        match['team_2_name'] = matchItem.select('div.match-item-vs-team-name')[1].get_text(strip=True)
+                    except:
+                        match['team_1_name'] = 'Unknown'
+                        match['team_2_name'] = 'Unknown'
                     
                     # Score
-                    match['team_1_score'] = matchItem.select('div.match-item-vs-team-score')[0].get_text(strip=True)
-                    match['team_2_score'] = matchItem.select('div.match-item-vs-team-score')[1].get_text(strip=True)
-                    
-                    temp['schedule'].append(match)
-                    
-            # Groups
-            temp['groups'] = []
-            groupItems = soupTournament.select('div.group-module')
-            if groupItems:
-                for groupItem in groupItems:
-                    group = dict()
-                    
-                    # Group title
-                    group['title'] = groupItem.select('div.wf-module-header')[0].get_text(strip=True)
-                    
-                    # Rows
-                    group['rows'] = []
-                    rowItems = groupItem.select('div.group-item')
-                    if rowItems:
-                        for rowItem in rowItems:
-                            row = dict()
-                            
-                            # Team name
-                            row['team_name'] = rowItem.select('div.group-table-row-name')[0].get_text(strip=True)
-                            
-                            # Matches 
-                            matches = rowItem.select('div.group-table-row-matches')[0].get_text(strip=True).split('-')
-                            # Wins
-                            row['wins'] = matches[0]
-                            # Losses
-                            row['losses'] = matches[1]
-                            # Draws
-                            row['draws'] = matches[2]
-                            
-                            # Maps
-                            row['maps'] = rowItem.select('div.group-table-row-games')[0].get_text(strip=True)
-                            
-                            group['rows'].append(row)
-                            
-                    temp['groups'].append(group)
-            
-            event.update(temp)
-            return event
-        except Exception as e: 
-            print(e)
-            return event
+                    try:
+                        match['team_1_score'] = matchItem.select('div.match-item-vs-team-score')[0].get_text(strip=True)
+                        match['team_2_score'] = matchItem.select('div.match-item-vs-team-score')[1].get_text(strip=True)
+                    except:
+                        match['team_1_score'] = '0'
+                        match['team_2_score'] = '0'
+
+                    event['schedule'].append(match)
+        except:
+            event['schedule'] = []
+                
+        ### Groups
+        event['groups'] = []
+        groupItems = soupTournament.select('div.group-module')
+        if groupItems:
+            for groupItem in groupItems:
+                group = dict()
+                
+                # Group title
+                group['title'] = groupItem.select('div.wf-module-header')[0].get_text(strip=True)
+                
+                # Rows
+                group['rows'] = []
+                rowItems = groupItem.select('div.group-item')
+                if rowItems:
+                    for rowItem in rowItems:
+                        row = dict()
+                        
+                        # Team name
+                        row['team_name'] = rowItem.select('div.group-table-row-name')[0].get_text(strip=True)
+                        
+                        # Matches 
+                        matches = rowItem.select('div.group-table-row-matches')[0].get_text(strip=True).split('-')
+                        # Wins
+                        row['wins'] = matches[0]
+                        # Losses
+                        row['losses'] = matches[1]
+                        # Draws
+                        row['draws'] = matches[2]
+                        
+                        # Maps
+                        row['maps'] = rowItem.select('div.group-table-row-games')[0].get_text(strip=True)
+                        
+                        group['rows'].append(row)
+                        
+                event['groups'].append(group)
+        return event
     
     @classmethod   
     def scrape_upcoming_completed(cls):
@@ -155,11 +175,11 @@ class Overgg:
             return None
             
     @classmethod
-    def scrape_match_time(cls, match):
+    def scrape_match_time(cls, url):
         """ Return the starting timestamp for a given over.gg URL."""
         try:
             # Load event page
-            htmlMatch = urllib.request.urlopen(match['url']).read()
+            htmlMatch = urllib.request.urlopen(url).read()
             soupMatch = BeautifulSoup(htmlMatch, 'html.parser')
 
             # Timestamp

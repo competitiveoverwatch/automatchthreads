@@ -1,4 +1,4 @@
-from modules.overgg import Overgg
+from modules.scraper import Scraper
 from modules.reddit import Reddit
 from modules.pasta import Pasta
 import time, pprint, datetime
@@ -6,64 +6,67 @@ import time, pprint, datetime
 class EventHandler:
     
     @classmethod
-    def check_upcoming_event(cls, event_entry):
+    def check_upcoming_event(cls, event):
+        # scrape first time
+        if 'title' not in event:
+            event = Scraper.scrape_event(event)
         # update start_time every 30 minutes
-        if (not event_entry['timestamp']) or (time.time() - event_entry['update_timestamp'] > 30*60):
+        if (not event['timestamp']) or (time.time() - event['update_timestamp'] > 30*60):
             print('Timestamp Update')
-            timestamp = Overgg.scrape_match_time(event_entry['data']['start_match_url'])
+            timestamp = Scraper.scrape_event_start_time(event)
             if timestamp:
-                event_entry['timestamp'] = timestamp - (30*60) # 30 minutes before match start
-                event_entry['update_timestamp'] = time.time()
-        # start thread if necessary
-        elif time.time() > event_entry['timestamp']:
+                event['timestamp'] = timestamp - (30*60) # 30 minutes before match start
+                event['update_timestamp'] = time.time()
+        # start thread if time is ready
+        elif time.time() > event['timestamp']:
             print('Creating Thread')
             # scrape event
-            event_entry['data'] = Overgg.scrape_event(event_entry['data'], event_entry['timestamp'], event_entry['duration'])
+            event['data'] = Scraper.scrape_event(event)
             # create markdown for the thread
-            body_text = Pasta.event_pasta(event_entry['data'])
+            body_text = Pasta.event_pasta(event)
             # create reddit thread if necessary
-            if (not 'reddit_url' in event_entry['data']) or (not event_entry['data']['reddit_url']):
-                event_entry['data']['reddit_url'] = Reddit.new_thread(event_entry['data']['reddit_title'], body_text)
-            Reddit.setup_thread(event_entry['data']['reddit_url'], sticky=True, sort_new=True, spoiler=True)
+            if (not 'reddit_url' in event) or (not event['reddit_url']):
+                event['reddit_url'] = Reddit.new_thread(event['reddit_title'], body_text)
+            Reddit.setup_thread(event['reddit_url'], sticky=True, sort_new=True, spoiler=True)
             # update database entry
-            event_entry['update_timestamp'] = time.time()
-            event_entry['status'] = 'live'
-        return event_entry
+            event['update_timestamp'] = time.time()
+            event['status'] = 'live'
+        return event
 
     @classmethod
-    def check_live_event(cls, event_entry):
-        if time.time() - event_entry['update_timestamp'] > 5*60:
+    def check_live_event(cls, event):
+        if time.time() - event['update_timestamp'] > 5*60:
             print('Updating Thread')
             # scrape event
-            event_entry['data'] = Overgg.scrape_event(event_entry['data'], event_entry['timestamp'], event_entry['duration'])
+            event = Scraper.scrape_event(event)
             # create markdown for the thread
-            body_text = Pasta.event_pasta(event_entry['data'])
+            body_text = Pasta.event_pasta(event)
             # edit reddit thread
-            Reddit.edit_thread(event_entry['data']['reddit_url'], body_text)
-            event_entry['update_timestamp'] = time.time()
-        if time.time() > (event_entry['timestamp'] + event_entry['duration']):
+            Reddit.edit_thread(event['reddit_url'], body_text)
+            event['update_timestamp'] = time.time()
+        if time.time() > (event['timestamp'] + event['duration']):
             print('Over Duration')
-            event_entry['update_timestamp'] = time.time()
-            event_entry['status'] = 'done'
-        return event_entry
+            event['update_timestamp'] = time.time()
+            event['status'] = 'done'
+        return event
 
     @classmethod
-    def check_event_entry(cls, event_entry):
+    def check_event_entry(cls, event):
         # upcoming events
-        if event_entry['status'] == 'upcoming':
-            event_entry = cls.check_upcoming_event(event_entry)
+        if event['status'] == 'upcoming':
+            event = cls.check_upcoming_event(event)
         # live events
-        if event_entry['status'] == 'live':
-            event_entry = cls.check_live_event(event_entry)
+        if event['status'] == 'live':
+            event = cls.check_live_event(event)
         # done events
-        if event_entry['status'] == 'done':
+        if event['status'] == 'done':
             pass
-        print(cls.event_description(event_entry))
-        return event_entry
+        print(cls.event_description(event))
+        return event
 
     @classmethod
-    def event_description(cls, event_entry):
-        event_title = event_entry['data']['title'] if 'title' in event_entry['data'] else 'Unknown'
-        date_time = datetime.datetime.fromtimestamp(event_entry['timestamp']).strftime('%Y-%m-%d %H:%M:%S') + ' UTC' if event_entry['timestamp'] else 'Unknown'
-        return event_entry['status'] + ': ' + date_time + ' -- ' + event_title
+    def event_description(cls, event):
+        event_title = event['title'] if 'title' in event else 'Unknown'
+        date_time = datetime.datetime.fromtimestamp(event['timestamp']).strftime('%Y-%m-%d %H:%M:%S') + ' UTC' if event['timestamp'] else 'Unknown'
+        return event['status'] + ': ' + date_time + ' -- ' + event_title
         

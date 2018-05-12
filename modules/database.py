@@ -22,7 +22,7 @@ class Database:
         c.close()
 
     def update_event(self, event):
-        data = pickle.dumps(event['data'])
+        data = pickle.dumps(event)
         insert = (event['status'], event['timestamp'], event['duration'], event['update_timestamp'], data, event['id'])
         c = self.conn.cursor()
         c.execute('UPDATE events SET status = ? ,timestamp = ? ,duration = ?, update_timestamp = ? ,data = ? WHERE id = ?', insert)

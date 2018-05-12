@@ -51,9 +51,9 @@ class MatchHandler:
         return match
 
     @classmethod
-    def match_description(cls, match_entry):
-        match_event_name = match_entry['event_name'] if 'event_name' in match_entry else 'Unknown'
-        team_1 = match_entry['team_1_name'] if 'team_1_name' in match_entry else 'Unknown'
-        team_2 = match_entry['team_2_name'] if 'team_2_name' in match_entry else 'Unknown'
-        date_time = datetime.datetime.fromtimestamp(match_entry['timestamp']).strftime('%Y-%m-%d %H:%M:%S') + ' UTC' if match_entry['timestamp'] else 'Unknown'
-        return match_entry['status'] + ': ' + date_time + ' -- ' + match_event_name + ': ' + team_1 + ' vs. ' + team_2
+    def match_description(cls, match):
+        match_event_name = match['event_name'] if 'event_name' in match else 'Unknown'
+        team_1 = match['team_1_name'] if 'team_1_name' in match else 'Unknown'
+        team_2 = match['team_2_name'] if 'team_2_name' in match else 'Unknown'
+        date_time = datetime.datetime.fromtimestamp(match['timestamp']).strftime('%Y-%m-%d %H:%M:%S') + ' UTC' if match['timestamp'] else 'Unknown'
+        return match['status'] + ': ' + date_time + ' -- ' + match_event_name + ': ' + team_1 + ' vs. ' + team_2

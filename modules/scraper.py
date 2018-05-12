@@ -3,11 +3,11 @@ from modules.scrapers.owl import OWL
 
 class Scraper:
     @classmethod
-    def scrape_match_time(cls, match):
-        if 'scrape_method' in match:
-            if match['scrape_method'] == 'overgg':
-                return Overgg.scrape_match_time(match)
-            elif match['scrape_method'] == 'owl':
+    def scrape_event_start_time(cls, event):
+        if 'scrape_method' in event:
+            if event['scrape_method'] == 'overgg':
+                return Overgg.scrape_match_time(event['start_match_url'])
+            elif event['scrape_method'] == 'owl':
                 return None
         else:
             return None
